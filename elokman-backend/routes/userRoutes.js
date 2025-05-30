@@ -122,4 +122,90 @@ router.put(
   }
 );
 
+// GET /api/users/health-summary - Kullanıcının tüm sağlık verilerini getir (AI için)
+router.get('/health-summary', protect, async (req, res) => {
+  console.log('--- /api/users/health-summary GET isteği geldi (korumalı) ---');
+  console.log('Doğrulanan kullanıcı (req.user):', req.user);
+
+  if (!req.user || !req.user.userId) {
+    return res.status(401).json({ errors: [{ message: 'Yetkilendirme hatası: Kullanıcı kimliği bulunamadı.' }] });
+  }
+
+  try {
+    const userId = req.user.userId;
+
+    // Kullanıcının temel bilgilerini al
+    const userResult = await db.query(
+      'SELECT id, username, email, full_name, phone_number, created_at FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ errors: [{ message: 'Kullanıcı bulunamadı.' }] });
+    }
+
+    const user = userResult.rows[0];
+
+    // TODO: Gerçek veriler için aşağıdaki sorguları kullanıcının ID'sine göre filtrelemelisiniz
+    // Şimdilik boş diziler döndürüyoruz çünkü ilgili tablolar henüz mevcut değil
+
+    // İlaçları al (medications tablosu varsa)
+    let medications = [];
+    try {
+      // const medicationsResult = await db.query('SELECT * FROM medications WHERE user_id = $1', [userId]);
+      // medications = medicationsResult.rows;
+    } catch (err) {
+      console.log('İlaçlar tablosu bulunamadı veya hata:', err.message);
+    }
+
+    // Randevuları al (appointments tablosu varsa)
+    let appointments = [];
+    try {
+      // const appointmentsResult = await db.query('SELECT * FROM appointments WHERE user_id = $1', [userId]);
+      // appointments = appointmentsResult.rows;
+    } catch (err) {
+      console.log('Randevular tablosu bulunamadı veya hata:', err.message);
+    }
+
+    // Raporları al (reports tablosu varsa)
+    let reports = [];
+    try {
+      // const reportsResult = await db.query('SELECT * FROM reports WHERE user_id = $1', [userId]);
+      // reports = reportsResult.rows;
+    } catch (err) {
+      console.log('Raporlar tablosu bulunamadı veya hata:', err.message);
+    }
+
+    // Sağlık geçmişini al (health_history tablosu varsa)
+    let healthHistory = [];
+    try {
+      // const healthHistoryResult = await db.query('SELECT * FROM health_history WHERE user_id = $1', [userId]);
+      // healthHistory = healthHistoryResult.rows;
+    } catch (err) {
+      console.log('Sağlık geçmişi tablosu bulunamadı veya hata:', err.message);
+    }
+
+    const healthSummary = {
+      user: {
+        id: user.id,
+        name: user.full_name || user.username,
+        email: user.email,
+        phoneNumber: user.phone_number,
+        memberSince: user.created_at
+      },
+      medications: medications,
+      appointments: appointments,
+      reports: reports,
+      healthHistory: healthHistory
+    };
+
+    console.log('Kullanıcı sağlık özeti başarıyla hazırlandı');
+    res.status(200).json(healthSummary);
+
+  } catch (error) {
+    console.error('Sağlık özeti alınırken sunucu hatası:', error);
+    res.status(500).json({ errors: [{ message: 'Sağlık özeti alınırken bir sunucu hatası oluştu.' }] });
+  }
+});
+
 module.exports = router;

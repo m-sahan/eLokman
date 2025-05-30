@@ -181,21 +181,61 @@ router.post('/chat', protect, async (req, res) => {
         if (process.env.NODE_ENV === 'development' || !process.env.NODE_ENV) {
             console.warn('Development modunda mock AI response kullanılıyor...');
             
-            let mockResponse = "Mock AI Response: ";
+            // Kullanıcı bilgilerini al
+            let userName = "Kullanıcı";
+            let userMedications = [];
+            let userReports = [];
+            
+            try {
+                const profileData = await getUserProfileData(req.user.userId);
+                const medications = await getUserMedications(req.user.userId);
+                const reports = await getUserRecentReportMeta(req.user.userId, 3);
+                
+                if (profileData && profileData.full_name) {
+                    userName = profileData.full_name;
+                }
+                userMedications = medications || [];
+                userReports = reports || [];
+                
+                console.log('Mock AI için kullanıcı verileri:', {
+                    userName,
+                    medications: userMedications,
+                    reports: userReports
+                });
+            } catch (error) {
+                console.error('Mock AI için kullanıcı verileri alınırken hata:', error);
+            }
+            
+            let mockResponse = `Merhaba ${userName}! Ben Lokman, sağlık asistanınız. `;
             const lowerMessage = userMessage.toLowerCase();
-            if (lowerMessage.includes('ilaç') || lowerMessage.includes('ilac') || lowerMessage.includes('medication')) {
-                mockResponse += "Kayıtlarınıza göre şu anda Parol 500mg ve D3 Vitamini kullanıyorsunuz. Ancak güncel bilgi için doktorunuza danışmanızı öneririm.";
-            } else if (lowerMessage.includes('yaş') || lowerMessage.includes('yas') || lowerMessage.includes('age')) {
-                mockResponse += "Kayıtlarınıza göre 35 yaşındasınız. Bu yaş grubunda düzenli sağlık kontrolleri önemlidir.";
+            
+            if (lowerMessage.includes('merhaba') || lowerMessage.includes('selam') || lowerMessage.includes('selamlar')) {
+                mockResponse = `Merhaba ${userName}! Ben Lokman, sağlık asistanınız. Size bugün nasıl yardımcı olabilirim?`;
+            } else if (lowerMessage.includes('ilaç') || lowerMessage.includes('ilac') || lowerMessage.includes('medication')) {
+                if (userMedications.length > 0) {
+                    const medicationList = userMedications.map(med => `${med.name} (${med.dose || 'Doz belirtilmemiş'})`).join(', ');
+                    mockResponse += `Kayıtlarınıza göre şu anda şu ilaçları kullanıyorsunuz: ${medicationList}. Ancak güncel bilgi için doktorunuza danışmanızı öneririm.`;
+                } else {
+                    mockResponse += "Sistemde kayıtlı ilaç bulunmuyor. İlaçlarınızı sisteme ekleyebilir veya doktorunuza danışabilirsiniz.";
+                }
             } else if (lowerMessage.includes('rapor') || lowerMessage.includes('report') || lowerMessage.includes('test')) {
-                mockResponse += "Son raporlarınızda kan tahlili ve EKG sonuçlarınız normal gözüküyor. Detaylar için doktorunuzla görüşebilirsiniz.";
+                if (userReports.length > 0) {
+                    const reportList = userReports.map(rep => `${rep.type} (${rep.status})`).join(', ');
+                    mockResponse += `Son raporlarınız: ${reportList}. Detaylar için doktorunuzla görüşebilirsiniz.`;
+                } else {
+                    mockResponse += "Sistemde kayıtlı rapor bulunmuyor. Raporlarınızı sisteme yükleyebilirsiniz.";
+                }
+            } else if (lowerMessage.includes('yaş') || lowerMessage.includes('yas') || lowerMessage.includes('age')) {
+                mockResponse += "Yaş bilginizi profil ayarlarınızdan güncelleyebilirsiniz. Bu yaş grubunda düzenli sağlık kontrolleri önemlidir.";
+            } else if (lowerMessage.includes('randevu') || lowerMessage.includes('appointment')) {
+                mockResponse += "Randevularınızı randevular sekmesinden takip edebilirsiniz. Yaklaşan randevularınız varsa size hatırlatırım.";
             } else {
-                mockResponse += "Size nasıl yardımcı olabilirim? İlaçlarınız, sağlık geçmişiniz veya raporlarınız hakkında sorular sorabilirsiniz.";
+                mockResponse += "Size nasıl yardımcı olabilirim? İlaçlarınız, randevularınız, raporlarınız veya genel sağlık konuları hakkında sorular sorabilirsiniz.";
             }
             
             return res.json({ 
                 reply: mockResponse,
-                warning: "Bu bir test yanıtıdır. Gerçek AI servisi için geçerli bir Gemini API key'i gereklidir."
+                warning: "Bu bir test yanıtıdır. Gerçek AI servisi için geçerli bir Gemini API anahtarı gereklidir."
             });
         }
         

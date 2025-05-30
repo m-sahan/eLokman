@@ -19,7 +19,11 @@ const morgan = require('morgan');
 
 // Middleware'ler
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Frontend URL'i
+    origin: [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        process.env.FRONTEND_URL
+    ].filter(Boolean), // process.env.FRONTEND_URL yoksa filtrele
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
